@@ -1,18 +1,22 @@
-/*
-Author: Jayant Singh
-Website: http://www.j4jayant.com
-Description:
-This Hadoop MapReduce code extends wordcount example & counts different trigger events(MSH_9) present in HL7 file
+/* 
+ * Copyright 2016 King's College London, Richard Jackson <richgjackson@gmail.com>.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package uk.ac.kcl;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v24.datatype.PN;
-import ca.uhn.hl7v2.model.v24.datatype.XPN;
-import ca.uhn.hl7v2.model.v24.message.ADT_A01;
-import ca.uhn.hl7v2.model.v24.message.ORU_R01;
-import ca.uhn.hl7v2.model.v24.segment.MSH;
 import ca.uhn.hl7v2.parser.CanonicalModelClassFactory;
 import ca.uhn.hl7v2.parser.DefaultXMLParser;
 import ca.uhn.hl7v2.util.Hl7InputStreamMessageIterator;
@@ -67,7 +71,7 @@ public class Transform {
     }
 
     public static void main(String[] args) throws Exception {
-        JobConf conf = new JobConf(EventCount.class);
+        JobConf conf = new JobConf(Transform.class);
         conf.setJobName("EventCount");
 
         conf.setOutputKeyClass(Text.class);
@@ -92,6 +96,7 @@ public class Transform {
             DefaultXMLParser xmlParser = new DefaultXMLParser(new CanonicalModelClassFactory("2.4"));
             String xml = xmlParser.encode(message);
             XmlMapper xmlMapper = new XmlMapper();
+            System.out.println(xml);            
             List entries = null;
             try {
                 entries = xmlMapper.readValue(xml, List.class);
@@ -106,7 +111,7 @@ public class Transform {
             } catch (IOException ex) {
                 Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
             }
-            System.out.println(json);
+
             return json;
         } catch (HL7Exception ex) {
             Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
