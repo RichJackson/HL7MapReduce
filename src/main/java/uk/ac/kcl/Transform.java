@@ -92,9 +92,9 @@ public class Transform {
             DefaultXMLParser xmlParser = new DefaultXMLParser(new CanonicalModelClassFactory("2.4"));
             String xml = xmlParser.encode(message);
             XmlMapper xmlMapper = new XmlMapper();
-            Map entries = null;
+            List entries = null;
             try {
-                entries = xmlMapper.readValue(xml, Map.class);
+                entries = xmlMapper.readValue(xml, List.class);
             } catch (IOException ex) {
                 Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
             }
@@ -107,7 +107,7 @@ public class Transform {
                 Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
             }
             System.out.println(json);
-            return xml;
+            return json;
         } catch (HL7Exception ex) {
             Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
         }
