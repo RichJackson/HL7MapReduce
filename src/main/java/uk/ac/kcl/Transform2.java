@@ -17,6 +17,7 @@ package uk.ac.kcl;
 
 import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.Message;
+import ca.uhn.hl7v2.model.v24.message.ADT_A01;
 import ca.uhn.hl7v2.parser.CanonicalModelClassFactory;
 import ca.uhn.hl7v2.parser.DefaultXMLParser;
 import ca.uhn.hl7v2.util.Hl7InputStreamMessageIterator;
@@ -33,18 +34,28 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import java.io.StringWriter;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.elasticsearch.hadoop.mr.EsOutputFormat;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class Transform2 {
 
-    public static class SomeMapper extends Mapper {      
-        
-     @Override
+    public static class SomeMapper extends Mapper {
+
+        @Override
         protected void map(Object key, Object value, Context context)
                 throws IOException, InterruptedException {
             String line = value.toString();
@@ -73,16 +84,16 @@ public class Transform2 {
         Configuration conf = new Configuration();
         conf.setBoolean("mapred.map.tasks.speculative.execution", false);
         conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
-        conf.set("es.nodes", "127.0.0.1:9200");
+        conf.set("es.nodes", "192.168.1.101:9200");
         conf.set("es.resource", "hl7/message");
         conf.set("es.input.json", "yes");
-//        conf.set("es.net.ssl", "true");
-//        conf.set("es.net.ssl.keystore.location","/home/rich/junk/node01.jks");
-//        conf.set("es.net.ssl.keystore.pass","");
-//        conf.set("es.net.ssl.truststore.location", "/home/rich/junk/node01.jks");
-//        conf.set("es.net.ssl.truststore.pass", "");        
-//        conf.set("es.net.http.auth.user", "admin");
-//        conf.set("es.net.http.auth.pass", "");
+        conf.set("es.net.ssl", "true");
+        conf.set("es.net.ssl.keystore.location", "file:///home/rich/junk/node01.jks");
+        conf.set("es.net.ssl.keystore.pass", "");
+        conf.set("es.net.ssl.truststore.location", "file:///home/rich/junk/node01.jks");
+        conf.set("es.net.ssl.truststore.pass", "");
+        conf.set("es.net.http.auth.user", "admin");
+        conf.set("es.net.http.auth.pass", "");
 
         Job job = Job.getInstance(conf);
 
@@ -96,33 +107,36 @@ public class Transform2 {
     }
 
     public static String convertHL7ToJson(Message message) {
-
         try {
             DefaultXMLParser xmlParser = new DefaultXMLParser(new CanonicalModelClassFactory("2.4"));
-            String xml = xmlParser.encode(message);
+            Document xml = xmlParser.encodeDocument(message);
+            cleanFieldNames(xml.getChildNodes().item(0));
+            try {
+                System.out.println(getStringFromDocument(xml));
+            } catch (TransformerException ex) {
+                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+            }
             XmlMapper xmlMapper = new XmlMapper();
-            System.out.println(xml);
             List entries = null;
             try {
-                entries = xmlMapper.readValue(xml, List.class);
-            } catch (IOException ex) {
+                entries = xmlMapper.readValue(getStringFromDocument(xml), List.class);
+            } catch (IOException | TransformerException ex) {
                 Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             ObjectMapper jsonMapper = new ObjectMapper();
-            
+
             String json = null;
             try {
                 json = jsonMapper.writeValueAsString(entries);
             } catch (IOException ex) {
                 Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
             }
-            
+
             System.out.println(json);
-            json = json.substring(1, (json.length()-1));
+            json = json.substring(1, (json.length() - 1));
             //to do  - add code to rename fields, removing periods
-            
- 
+
             return json;
         } catch (HL7Exception ex) {
             Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
@@ -130,4 +144,33 @@ public class Transform2 {
         return null;
     }
 
+    public static String getStringFromDocument(Document doc) throws TransformerException {
+        DOMSource domSource = new DOMSource(doc);
+        StringWriter writer = new StringWriter();
+        StreamResult result = new StreamResult(writer);
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.transform(domSource, result);
+        return writer.toString();
+    }
+    
+    public static void cleanFieldNames(Node node) {
+        // do something with the current node instead of System.out
+        System.out.println(node.getNodeName());
+
+        NodeList nodeList = node.getChildNodes();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node currentNode = nodeList.item(i);
+            if (currentNode.getNodeType() == Node.ELEMENT_NODE) {
+                //calls this method for all the children which is Element
+                Element el = (Element) nodeList.item(i);
+                System.out.println(el.getNodeName());
+                System.out.println(nodeList.getLength());                    
+                if (el.getNodeName().contains(".")) {
+                    el.getOwnerDocument().renameNode(nodeList.item(i), null, el.getNodeName().replace(".", "_"));
+                }                             
+                cleanFieldNames(currentNode);                                
+            }
+        }
+    }    
 }
