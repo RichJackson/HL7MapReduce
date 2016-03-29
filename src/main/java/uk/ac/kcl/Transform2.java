@@ -24,7 +24,6 @@ import java.io.ByteArrayInputStream;
 import org.apache.hadoop.fs.Path;
 //import org.apache.hadoop.conf.*;
 import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,16 +33,20 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
+import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.elasticsearch.hadoop.mr.EsOutputFormat;
 
-public class Transform {
+public class Transform2 {
 
-    public static class Map extends MapReduceBase implements Mapper<LongWritable, Text, Text, IntWritable> {
-
-        private final static IntWritable one = new IntWritable(1);
-        private Text word = new Text();
-        final String MSH_SEG_START = "MSH|^~\\&";
-
-        public void map(LongWritable key, Text value, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
+    public static class SomeMapper extends Mapper {      
+        
+     @Override
+        protected void map(Object key, Object value, Context context)
+                throws IOException, InterruptedException {
             String line = value.toString();
             //check if line starts with MSH
             // if(line.startsWith(MSH_SEG_START))
@@ -54,67 +57,75 @@ public class Transform {
             // The following class is a HAPI utility that will iterate over
             // the messages which appear over an InputStream
             Hl7InputStreamMessageIterator iter = new Hl7InputStreamMessageIterator(is);
-            int i = 0;
             while (iter.hasNext()) {
-                Message next = iter.next();                
-                System.out.println(convertHL7ToJson(next));
-
+                Message next = iter.next();
+                String json = Transform2.convertHL7ToJson(next);
+                System.out.println();
+                BytesWritable jsonDoc = new BytesWritable(json.getBytes());
+                // send the doc directly
+                context.write(NullWritable.get(), jsonDoc);
             }
-        }
-    }
-
-    public static class Reduce extends MapReduceBase implements Reducer<Text, IntWritable, Text, IntWritable> {
-
-        public void reduce(Text key, Iterator<IntWritable> values, OutputCollector<Text, IntWritable> output, Reporter reporter) throws IOException {
 
         }
     }
 
     public static void main(String[] args) throws Exception {
-        JobConf conf = new JobConf(Transform.class);
-        conf.setJobName("EventCount");
+        Configuration conf = new Configuration();
+        conf.setBoolean("mapred.map.tasks.speculative.execution", false);
+        conf.setBoolean("mapred.reduce.tasks.speculative.execution", false);
+        conf.set("es.nodes", "127.0.0.1:9200");
+        conf.set("es.resource", "hl7/message");
+        conf.set("es.input.json", "yes");
+//        conf.set("es.net.ssl", "true");
+//        conf.set("es.net.ssl.keystore.location","/home/rich/junk/node01.jks");
+//        conf.set("es.net.ssl.keystore.pass","");
+//        conf.set("es.net.ssl.truststore.location", "/home/rich/junk/node01.jks");
+//        conf.set("es.net.ssl.truststore.pass", "");        
+//        conf.set("es.net.http.auth.user", "admin");
+//        conf.set("es.net.http.auth.pass", "");
 
-        conf.setOutputKeyClass(Text.class);
-        conf.setOutputValueClass(IntWritable.class);
+        Job job = Job.getInstance(conf);
 
-        conf.setMapperClass(Map.class);
-        conf.setCombinerClass(Reduce.class);
-        conf.setReducerClass(Reduce.class);
-
-        conf.setInputFormat(TextInputFormat.class);
-        conf.setOutputFormat(TextOutputFormat.class);
-
-        FileInputFormat.setInputPaths(conf, new Path(args[0]));
-        FileOutputFormat.setOutputPath(conf, new Path(args[1]));
-
-        JobClient.runJob(conf);
+        FileInputFormat.setInputPaths(job, new Path(args[0]));
+        FileOutputFormat.setOutputPath(job, new Path(args[1]));
+        job.setMapperClass(SomeMapper.class);
+        job.setMapOutputKeyClass(NullWritable.class);
+        job.setMapOutputValueClass(BytesWritable.class);
+        job.setOutputFormatClass(EsOutputFormat.class);
+        job.waitForCompletion(true);
     }
 
-   static String convertHL7ToJson(Message message) {
+    public static String convertHL7ToJson(Message message) {
 
         try {
             DefaultXMLParser xmlParser = new DefaultXMLParser(new CanonicalModelClassFactory("2.4"));
             String xml = xmlParser.encode(message);
             XmlMapper xmlMapper = new XmlMapper();
-            System.out.println(xml);            
+            System.out.println(xml);
             List entries = null;
             try {
                 entries = xmlMapper.readValue(xml, List.class);
             } catch (IOException ex) {
-                Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             ObjectMapper jsonMapper = new ObjectMapper();
+            
             String json = null;
             try {
                 json = jsonMapper.writeValueAsString(entries);
             } catch (IOException ex) {
-                Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
             }
-
+            
+            System.out.println(json);
+            json = json.substring(1, (json.length()-1));
+            //to do  - add code to rename fields, removing periods
+            
+ 
             return json;
         } catch (HL7Exception ex) {
-            Logger.getLogger(Transform.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
