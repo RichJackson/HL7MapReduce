@@ -21,8 +21,10 @@ dependencies {
     //   http://www.gradle.org/docs/current/userguide/dependency_management.html#sec:how_to_declare_your_dependencies
     compile 'ca.uhn.hapi:hapi-base:2.2'
     compile 'ca.uhn.hapi:hapi-structures-v24:2.2'
-    compile 'org.apache.hadoop:hadoop-common:2.7.2'
-    compile 'org.apache.hadoop:hadoop-mapreduce-client-core:2.7.2'
+    //compile 'org.apache.hadoop:hadoop-common:2.7.2'
+    //compile 'org.apache.hadoop:hadoop-mapreduce-client-core:2.7.2'
+    compile 'org.apache.hadoop:hadoop-common:2.2.0'
+    compile 'org.apache.hadoop:hadoop-mapreduce-client-core:2.2.0'    
     compile 'log4j:log4j:1.2.17'
     compile 'org.elasticsearch:elasticsearch-hadoop-mr:2.2.0'
     compile 'com.fasterxml.jackson.core:jackson-core:2.7.3'
@@ -38,3 +40,16 @@ jar {
     configurations.compile.collect { it.isDirectory() ? it : zipTree(it) }
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
