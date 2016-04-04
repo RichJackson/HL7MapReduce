@@ -16,15 +16,17 @@
 package uk.ac.kcl;
 
 import ca.uhn.hl7v2.HL7Exception;
+import ca.uhn.hl7v2.model.AbstractMessage;
 import ca.uhn.hl7v2.model.DataTypeException;
 import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v24.datatype.TS;
-import ca.uhn.hl7v2.model.v24.message.ADT_A01;
-import ca.uhn.hl7v2.model.v24.message.ORU_R01;
-import ca.uhn.hl7v2.model.v24.segment.MSH;
+import ca.uhn.hl7v2.model.v23.datatype.TS;
+import ca.uhn.hl7v2.model.v23.segment.MSH;
+import ca.uhn.hl7v2.model.v23.segment.PID;
+
 import ca.uhn.hl7v2.parser.CanonicalModelClassFactory;
 import ca.uhn.hl7v2.parser.DefaultXMLParser;
 import ca.uhn.hl7v2.util.Hl7InputStreamMessageIterator;
+import ca.uhn.hl7v2.util.Terser;
 import java.io.ByteArrayInputStream;
 import org.apache.hadoop.fs.Path;
 //import org.apache.hadoop.conf.*;
@@ -61,31 +63,47 @@ public class Transform2 {
 
     public static class MapToHL7String extends Mapper {
 
-        private Text fieldName;
-        private Text fieldValue;
-
         @Override
         protected void map(Object key, Object value, Context context)
                 throws IOException, InterruptedException {
             // create the MapWritable object
-            fieldName = new Text("body");
-            fieldValue = new Text(value.toString());
             MapWritable doc = new MapWritable();
-            doc.put(fieldName, fieldValue);
             doc.putAll(Transform2.extractHL7Metadata(value.toString()));
-            context.write(NullWritable.get(), doc);
+            if(doc.size()!=0){
+                context.write(NullWritable.get(), doc);
+            }
         }
     }
 
     public static Map<Text, Writable> extractHL7Metadata(String messageString) {
         InputStream is = new ByteArrayInputStream(messageString.getBytes(StandardCharsets.UTF_8));
         Hl7InputStreamMessageIterator iter = new Hl7InputStreamMessageIterator(is);
-        System.out.println("STARTING MAIN LOOP for " + messageString);
         Map<Text, Writable> map = new HashMap<>();
         while (iter.hasNext()) {
             Message next = iter.next();
-            ORU_R01 r01 = (ORU_R01) next;
-            map.put(new Text("messageTimeStamp"), Transform2.getIso8601TimeFromMSH(r01.getMSH()));
+            Text fieldName = new Text("body");
+            try {
+                if (!next.printStructure().startsWith("ACK") ) {
+                    try {
+                        map.put(fieldName, new Text(next.printStructure()));
+                    } catch (HL7Exception ex) {
+                        Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    try {
+                        map.put(new Text("message_time_stamp"), Transform2.getIso8601TimeFromMSH(Transform2.getMSH((AbstractMessage) next)));
+                    } catch (HL7Exception ex) {
+                        Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                    
+                    try {
+                        map.put(new Text("pid"), Transform2.getPID((AbstractMessage) next));
+                    } catch (HL7Exception ex) {
+                        Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+            } catch (HL7Exception ex) {
+                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
         return map;
     }
@@ -137,11 +155,6 @@ public class Transform2 {
             DefaultXMLParser xmlParser = new DefaultXMLParser(new CanonicalModelClassFactory("2.4"));
             Document xml = xmlParser.encodeDocument(message);
             cleanFieldNames(xml.getChildNodes().item(0));
-//            try {
-//                System.out.println(getStringFromDocument(xml));
-//            } catch (TransformerException ex) {
-//                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
-//            }
             XmlMapper xmlMapper = new XmlMapper();
             List entries = null;
             try {
@@ -213,12 +226,26 @@ public class Transform2 {
 
         DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mmZ");
         String returnString = null;
-        try{
+        try {
             returnString = df.format(date);
-        }catch(NullPointerException ex){
+        } catch (NullPointerException ex) {
             return NullWritable.get();
         }
         System.out.println(returnString);
         return new Text(returnString);
+    }
+
+    public static MSH getMSH(AbstractMessage message) throws HL7Exception {
+        return (MSH) message.get("MSH");
+    }
+
+    public static Writable getPID(AbstractMessage message) throws HL7Exception {
+        Terser terser = new Terser(message);
+        Text t = new Text(terser.get("/PID-3"));
+        if (t != null) {
+            return t;
+        } else {
+            return NullWritable.get();
+        }
     }
 }

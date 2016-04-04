@@ -20,7 +20,7 @@ dependencies {
     // You can read more about how to add dependency here:
     //   http://www.gradle.org/docs/current/userguide/dependency_management.html#sec:how_to_declare_your_dependencies
     compile 'ca.uhn.hapi:hapi-base:2.2'
-    compile 'ca.uhn.hapi:hapi-structures-v24:2.2'
+    compile 'ca.uhn.hapi:hapi-structures-v23:2.2'
     //compile 'org.apache.hadoop:hadoop-common:2.7.2'
     //compile 'org.apache.hadoop:hadoop-mapreduce-client-core:2.7.2'
     compile 'org.apache.hadoop:hadoop-common:2.2.0'
