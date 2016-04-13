@@ -19,9 +19,8 @@ import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.AbstractMessage;
 import ca.uhn.hl7v2.model.DataTypeException;
 import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v23.datatype.TS;
-import ca.uhn.hl7v2.model.v23.segment.MSH;
-import ca.uhn.hl7v2.model.v23.segment.PID;
+import ca.uhn.hl7v2.model.v231.datatype.TS;
+import ca.uhn.hl7v2.model.v231.segment.MSH;
 
 import ca.uhn.hl7v2.parser.CanonicalModelClassFactory;
 import ca.uhn.hl7v2.parser.DefaultXMLParser;
@@ -241,7 +240,12 @@ public class Transform2 {
 
     public static Writable getPID(AbstractMessage message) throws HL7Exception {
         Terser terser = new Terser(message);
-        Text t = new Text(terser.get("/PID-3"));
+        Text t;
+//        if(terser.get("/MSH-12").equals("2.3")){
+//            t = new Text(terser.get("/PID-3"));
+//        }else{
+            t = new Text(terser.get("/.PID-3-1"));
+//        }       
         if (t != null) {
             return t;
         } else {
