@@ -58,7 +58,7 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
-public class Transform2 {
+public class Transform23 {
 
     public static class MapToHL7String extends Mapper {
 
@@ -67,7 +67,7 @@ public class Transform2 {
                 throws IOException, InterruptedException {
             // create the MapWritable object
             MapWritable doc = new MapWritable();
-            doc.putAll(Transform2.extractHL7Metadata(value.toString()));
+            doc.putAll(Transform23.extractHL7Metadata(value.toString()));
             if(doc.size()!=0){
                 context.write(NullWritable.get(), doc);
             }
@@ -86,22 +86,22 @@ public class Transform2 {
                     try {
                         map.put(fieldName, new Text(next.printStructure()));
                     } catch (HL7Exception ex) {
-                        Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     try {
-                        map.put(new Text("message_time_stamp"), Transform2.getIso8601TimeFromMSH(Transform2.getMSH((AbstractMessage) next)));
+                        map.put(new Text("message_time_stamp"), Transform23.getIso8601TimeFromMSH(Transform23.getMSH((AbstractMessage) next)));
                     } catch (HL7Exception ex) {
-                        Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
                     }
                     
                     try {
-                        map.put(new Text("pid"), Transform2.getPID((AbstractMessage) next));
+                        map.put(new Text("pid"), Transform23.getPID((AbstractMessage) next));
                     } catch (HL7Exception ex) {
-                        Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                        Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
                     }
                 }
             } catch (HL7Exception ex) {
-                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
         return map;
@@ -159,7 +159,7 @@ public class Transform2 {
             try {
                 entries = xmlMapper.readValue(getStringFromDocument(xml), List.class);
             } catch (IOException | TransformerException ex) {
-                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             ObjectMapper jsonMapper = new ObjectMapper();
@@ -168,7 +168,7 @@ public class Transform2 {
             try {
                 json = jsonMapper.writeValueAsString(entries);
             } catch (IOException ex) {
-                Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+                Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
             }
 
             //System.out.println(json);
@@ -177,7 +177,7 @@ public class Transform2 {
 
             return json;
         } catch (HL7Exception ex) {
-            Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
     }
@@ -219,7 +219,7 @@ public class Transform2 {
         try {
             date = ts.getTimeOfAnEvent().getValueAsDate();
         } catch (DataTypeException ex) {
-            Logger.getLogger(Transform2.class.getName()).log(Level.SEVERE, null, ex);
+            Logger.getLogger(Transform23.class.getName()).log(Level.SEVERE, null, ex);
             return NullWritable.get();
         }
 
@@ -241,11 +241,7 @@ public class Transform2 {
     public static Writable getPID(AbstractMessage message) throws HL7Exception {
         Terser terser = new Terser(message);
         Text t;
-//        if(terser.get("/MSH-12").equals("2.3")){
-//            t = new Text(terser.get("/PID-3"));
-//        }else{
-            t = new Text(terser.get("/.PID-3-1"));
-//        }       
+        t = new Text(terser.get("/PID-3"));
         if (t != null) {
             return t;
         } else {

@@ -56,7 +56,7 @@ String msg = "MSH|^~\\&|HIS|RIH|EKG|EKG|199904140038||ADT^A01||P|2.3\r"
         System.out.println("getPID");
         AbstractMessage message = null;
         Writable expResult = new Text("00001122");
-        Writable result = Transform2.getPID((AbstractMessage) hapiMsg);
+        Writable result = Transform23.getPID((AbstractMessage) hapiMsg);
         assertEquals(expResult, result);
      
      
@@ -65,13 +65,13 @@ String msg = "MSH|^~\\&|HIS|RIH|EKG|EKG|199904140038||ADT^A01||P|2.3\r"
     @Test
     public void examinev231Structure() throws HL7Exception{
         System.out.println (hapiMsg.printStructure());
-        System.out.println (Transform2.getPID((AbstractMessage) hapiMsg));
+        System.out.println (Transform23.getPID((AbstractMessage) hapiMsg));
     }
     
     @Test
     public void testMalformedMessageReturnsNull() throws Exception {
         System.out.println("testMalformedMessageReturnsNull");
-        Map map = Transform2.extractHL7Metadata("some junk");
+        Map map = Transform23.extractHL7Metadata("some junk");
         assertEquals(map.size(),0);
      
      
