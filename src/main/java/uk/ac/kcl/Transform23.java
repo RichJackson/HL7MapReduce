@@ -19,8 +19,8 @@ import ca.uhn.hl7v2.HL7Exception;
 import ca.uhn.hl7v2.model.AbstractMessage;
 import ca.uhn.hl7v2.model.DataTypeException;
 import ca.uhn.hl7v2.model.Message;
-import ca.uhn.hl7v2.model.v231.datatype.TS;
-import ca.uhn.hl7v2.model.v231.segment.MSH;
+import ca.uhn.hl7v2.model.v23.datatype.TS;
+import ca.uhn.hl7v2.model.v23.segment.MSH;
 
 import ca.uhn.hl7v2.parser.CanonicalModelClassFactory;
 import ca.uhn.hl7v2.parser.DefaultXMLParser;
@@ -123,7 +123,7 @@ public class Transform23 {
 //        conf.set("es.net.http.auth.user", "admin");
 //        conf.set("es.net.http.auth.pass", "");
         conf.set("es.nodes", args[2]);
-        conf.set("es.resource", "hl7/message");
+        conf.set("es.resource", args[10] + args[11]);
         conf.set("textinputformat.record.delimiter", "\n");
         //conf.set("es.input.json", "yes");
         if (args[3].equalsIgnoreCase("true")) {
